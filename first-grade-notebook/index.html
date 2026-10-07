@@ -88,6 +88,12 @@ h1,h2{margin:0;text-wrap:balance}
 .frame span:nth-child(5n){border-right:0}
 .frame span:nth-child(n+6){border-bottom:0}
 @media (max-width:420px){.frame{grid-template-columns:repeat(5,40px)}.frame span{height:40px;font-size:25px}}
+.pairs{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:620px}
+.pair{display:flex;flex-direction:column;gap:4px;padding:5px;border:2.5px solid var(--accent);border-radius:16px;background:var(--tile)}
+.pair span{width:46px;height:46px;display:grid;place-items:center;font-size:34px;line-height:1}
+.pair.lone{border-color:var(--warm);border-style:dashed}
+.pair .gap{border:2px dashed var(--line);border-radius:12px}
+@media (max-width:420px){.pair span{width:38px;height:38px;font-size:28px}}
 .dots{display:flex;flex-wrap:wrap;gap:24px;justify-content:center}
 .grp{display:grid;grid-template-columns:repeat(5,24px);gap:8px}
 .dot{width:24px;height:24px;border-radius:50%;background:var(--accent);position:relative}
@@ -182,7 +188,7 @@ h1,h2{margin:0;text-wrap:balance}
   Item                 { id, kind:"choice"|"card"|"check", prompt, say?, text?, show?:Show|Show[],
                          choices?:[string | {text, emoji?, say?}], answer?:string, explain? }
   Show                 {type:"emoji",value,caption?} {type:"word",value} {type:"sentence",value} {type:"hear",value}
-                       {type:"count",emoji,n} {type:"equation",value:"3 + 4 = ?"} {type:"sequence",values:[...,"?"]}
+                       {type:"count",emoji,n} {type:"pairs",emoji,n} {type:"equation",value:"3 + 4 = ?"} {type:"sequence",values:[...,"?"]}
                        {type:"clock",h,m} {type:"shape",name} {type:"blocks",n} {type:"dots",a,b?|cross?}
   settings/main        { review: number of review questions after the lesson (default 3) }
   progress/<lessonId>  { title, runs, last, score, total, best, items:{ <itemId>:{b,due,r,w,last} } }  (page writes)
@@ -221,7 +227,7 @@ const ICON = {
 const iconEl = (name, cls) => { const s = fromMarkup(ICON[name]); if (cls) s.setAttribute('class', cls); return s; };
 
 /* ---------------- lesson data: normalize whatever is in the store ---------------- */
-const SHOW_TYPES = new Set(['emoji', 'word', 'sentence', 'hear', 'count', 'equation', 'sequence', 'clock', 'shape', 'blocks', 'dots']);
+const SHOW_TYPES = new Set(['emoji', 'word', 'sentence', 'hear', 'count', 'pairs', 'equation', 'sequence', 'clock', 'shape', 'blocks', 'dots']);
 const str = (v, max = 600) => typeof v === 'string' ? v.slice(0, max) : typeof v === 'number' ? String(v) : '';
 function normItem(raw, i) {
   if (!raw || typeof raw !== 'object') return null;
@@ -363,6 +369,12 @@ function renderShow(s) {
       const n = clamp(s.n, 0, 20), e = str(s.emoji, 24) || '●', f = el('div', 'frames');
       for (let i = 0; i < (n > 10 ? 2 : 1); i++) { const fr = el('div', 'frame'); for (let c = 0; c < 10; c++) fr.append(el('span', null, i * 10 + c < n ? e : '')); f.append(fr); }
       return f;
+    }
+    case 'pairs': {
+      const n = clamp(s.n, 0, 20), e = str(s.emoji, 24) || '●', w = el('div', 'pairs');
+      w.setAttribute('role', 'img'); w.setAttribute('aria-label', `${n} in pairs`);
+      for (let i = 0; i < n; i += 2) { const col = el('div', 'pair' + (i + 1 < n ? '' : ' lone')); col.append(el('span', null, e), i + 1 < n ? el('span', null, e) : el('span', 'gap')); w.append(col); }
+      return w;
     }
     case 'equation': {
       const w = el('div', 'eq');

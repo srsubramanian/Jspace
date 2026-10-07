@@ -6,7 +6,7 @@ import { basename } from 'node:path';
 
 const SHOW = {
   emoji: ['value'], word: ['value'], sentence: ['value'], hear: ['value'],
-  count: ['emoji', 'n'], equation: ['value'], sequence: ['values'],
+  count: ['emoji', 'n'], pairs: ['emoji', 'n'], equation: ['value'], sequence: ['values'],
   clock: ['h', 'm'], shape: ['name'], blocks: ['n'], dots: ['a'],
 };
 const SHAPES = ['circle', 'oval', 'triangle', 'square', 'rectangle', 'rhombus', 'trapezoid', 'pentagon', 'hexagon', 'octagon'];
@@ -35,7 +35,7 @@ for (const file of process.argv.slice(2)) {
       if (!SHOW[s.type]) { errs.push(`${at}: unknown show type "${s.type}"`); continue; }
       for (const f of SHOW[s.type]) if (s[f] === undefined) errs.push(`${at}: show "${s.type}" needs "${f}"`);
       if (s.type === 'shape' && !SHAPES.includes(String(s.name).toLowerCase())) errs.push(`${at}: shape must be one of ${SHAPES.join(', ')}`);
-      if (s.type === 'count' && !(s.n >= 0 && s.n <= 20)) errs.push(`${at}: count n must be 0–20`);
+      if ((s.type === 'count' || s.type === 'pairs') && !(s.n >= 0 && s.n <= 20)) errs.push(`${at}: ${s.type} n must be 0–20`);
       if (s.type === 'blocks' && !(s.n >= 0 && s.n <= 99)) errs.push(`${at}: blocks n must be 0–99`);
     }
     if (kind === 'choice') {

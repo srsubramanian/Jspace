@@ -80,6 +80,7 @@ Each question has a level from 0 to 5.
 | `sentence` | `value` | a sentence with a “Read it to me” button |
 | `hear` | `value` | a “Hear it” button only, for listening and sight-word questions |
 | `count` | `emoji`, `n` (0–20) | ten-frames filled with the emoji |
+| `pairs` | `emoji`, `n` (0–20) | the emoji in partner pairs; an odd one out sits next to a dashed empty spot (odd and even, doubles) |
 | `equation` | `value` like `"3 + 4 = ?"` (tokens separated by spaces) | a big equation; `?` becomes a dashed box |
 | `sequence` | `values` like `["2","4","?","8"]` | number boxes |
 | `clock` | `h` (1–12), `m` (0–59) | an analog clock |
