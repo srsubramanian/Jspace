@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Times Table Sprint</title>
+<meta name="description" content="Spoken times-table practice: 20 timed questions, answered out loud, that adapt to the facts she is slow on.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Grandstander:wght@700;800&display=swap">
+<style>
+/* Layout: one column (max 820px). Home and results stack summary → facts grid → history.
+   The sprint screen is a single huge equation with a stopwatch above it and what the mic heard below it. */
+:root{
+  --bg:#F4F6FA; --tile:#FFFFFF; --ink:#1C2333; --muted:#667189; --line:#DCE1EA;
+  --accent:#3D63DD; --accent-soft:#E7EDFD; --accent-edge:#2C4BB0; --on-accent:#FFFFFF;
+  --clock:#E2602A; --good:#1E9258; --good-soft:#E3F4EA; --slow:#D9930B; --slow-soft:#FCF1D9;
+  --miss:#C9443B; --miss-soft:#FAE6E4; --unseen:#EEF1F6; --locked:#F7F8FB;
+  --f-display:"Grandstander","Chalkboard SE","Comic Sans MS",system-ui,sans-serif;
+  --f-read:"Andika","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#11141B; --tile:#1A1F2A; --ink:#E8ECF4; --muted:#9AA4B8; --line:#2C3443;
+    --accent:#8EA8FF; --accent-soft:#222C47; --accent-edge:#5470C9; --on-accent:#0D1220;
+    --clock:#FF8F5C; --good:#4CCB8A; --good-soft:#173726; --slow:#F2B640; --slow-soft:#3A2E12;
+    --miss:#FF8378; --miss-soft:#3D2124; --unseen:#232A38; --locked:#161A23;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.5 var(--f-read);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+h1,h2,h3{margin:0;text-wrap:balance}
+.shell{min-height:100%;max-width:820px;margin:0 auto;padding-inline:16px;padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font:800 22px/1 var(--f-display)}
+.brand b{color:var(--clock)}
+.chip{font-size:14px;border:1.5px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--tile);color:var(--muted)}
+.chip b{color:var(--ink)}
+main{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0}
+.card{background:var(--tile);border:1.5px solid var(--line);border-radius:20px;padding:18px 20px}
+.lede{color:var(--muted);margin:0;max-width:60ch}
+.go{border:0;border-radius:22px;background:var(--accent);color:var(--on-accent);font:800 30px/1 var(--f-display);padding:20px 54px;box-shadow:0 6px 0 var(--accent-edge);margin-bottom:6px;cursor:pointer}
+.go:active{transform:translateY(4px);box-shadow:0 2px 0 var(--accent-edge)}
+.go[disabled]{opacity:.5;cursor:default}
+.ghost{background:none;border:2px solid var(--line);border-radius:14px;padding:10px 16px;font-weight:700;cursor:pointer}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:15px}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding-block:18px 6px}
+.hero h1{font:800 clamp(34px,7vw,52px)/1.05 var(--f-display)}
+.warn{border-color:var(--miss);background:var(--miss-soft)}
+.warn b{color:var(--miss)}
+
+/* level */
+.level{display:flex;flex-direction:column;gap:8px}
+.level .lbl{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:15px}
+.level .lbl b{font-family:var(--f-display);font-size:18px}
+.bar{height:12px;border-radius:6px;background:var(--unseen);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--good);border-radius:6px}
+.levelup{border-color:var(--good);background:var(--good-soft)}
+.levelup h2{font:800 24px/1.1 var(--f-display);color:var(--good)}
+
+/* sprint */
+.sprint{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;min-height:60vh}
+.meter{width:100%;display:flex;align-items:center;gap:14px}
+.meter .count{font:700 16px/1 var(--f-read);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.meter .track{flex:1;height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.meter .track i{display:block;height:100%;background:var(--accent);transition:width .25s ease}
+.watch{font:700 18px/1 var(--f-read);color:var(--clock);font-variant-numeric:tabular-nums;white-space:nowrap}
+.eq{font:700 clamp(72px,19vw,150px)/1 var(--f-read);font-variant-numeric:tabular-nums;letter-spacing:-.01em;display:flex;gap:.25em;align-items:baseline;justify-content:center;flex-wrap:wrap}
+.eq .ans{min-width:1.6em;color:var(--accent)}
+.eq.ok .ans{color:var(--good)}
+.eq.no .ans{color:var(--miss)}
+.heard{min-height:44px;display:flex;align-items:center;gap:10px;font-size:20px;color:var(--muted)}
+.mic{width:16px;height:16px;border-radius:50%;background:var(--miss);box-shadow:0 0 0 0 var(--miss);animation:pulse 1.4s infinite}
+.mic.off{background:var(--line);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--miss) 55%,transparent)}70%{box-shadow:0 0 0 12px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.fb{min-height:34px;font:800 24px/1.2 var(--f-display)}
+.fb.ok{color:var(--good)}
+.fb.no{color:var(--miss)}
+.countdown{font:800 clamp(120px,30vw,220px)/1 var(--f-display);color:var(--accent)}
+
+/* results */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.stats{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.stats .big{grid-column:1/-1}}
+.stat{background:var(--tile);border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;min-width:0}
+.stat span{display:block;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.stat b{display:block;font:800 30px/1.15 var(--f-display);font-variant-numeric:tabular-nums}
+.stat.big b{font-size:44px;color:var(--clock)}
+.stat small{color:var(--muted);font-size:14px}
+.better{color:var(--good)!important}.worse{color:var(--miss)!important}
+.slowlist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.slowlist li{display:grid;grid-template-columns:90px minmax(0,1fr) 70px;gap:10px;align-items:center;font-variant-numeric:tabular-nums}
+.slowlist .f{font:700 20px/1 var(--f-read)}
+.slowlist .t{text-align:right;color:var(--muted)}
+.slowlist .b{height:10px;border-radius:5px;background:var(--slow)}
+.slowlist .b.miss{background:var(--miss)}
+h2.sec{font:800 20px/1.2 var(--f-display);margin-bottom:10px}
+
+/* facts grid */
+.gridwrap{overflow-x:auto}
+.grid{display:grid;grid-template-columns:28px repeat(var(--n),minmax(24px,1fr));gap:3px;min-width:calc(28px + var(--n) * 27px);font-variant-numeric:tabular-nums}
+.grid .h{font-size:13px;color:var(--muted);display:grid;place-items:center;font-weight:700}
+.grid .c{aspect-ratio:1;border-radius:6px;background:var(--unseen);border:1.5px solid transparent;display:grid;place-items:center;font-size:11px;color:var(--muted)}
+.grid .c.locked{background:transparent;border:1.5px dashed var(--line)}
+.grid .c.fluent{background:var(--good);color:var(--on-accent)}
+.grid .c.slow{background:var(--slow-soft);border-color:var(--slow);color:var(--ink)}
+.grid .c.miss{background:var(--miss-soft);border-color:var(--miss);color:var(--ink)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px;border:1.5px solid transparent}
+
+/* history */
+.hist{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:18px}
+.hist div{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.hist i{display:block;width:100%;max-width:38px;border-radius:6px 6px 2px 2px;background:var(--accent)}
+.hist div:last-child i{background:var(--clock)}
+.hist span{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* settings */
+.setrow{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
+.setrow:last-child{border-bottom:0}
+.setrow p{margin:0;flex:1 1 240px;min-width:0}
+.setrow small{display:block;color:var(--muted)}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{border:0;background:var(--tile);padding:8px 14px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.danger{background:var(--miss);color:#fff;border:0;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer}
+textarea.copy{width:100%;min-height:140px;font:13px/1.4 ui-monospace,Menlo,monospace;border:1.5px solid var(--line);border-radius:12px;padding:10px;background:var(--tile);color:var(--ink)}
+.foot{color:var(--muted);font-size:13px;text-align:center;max-width:62ch;margin:0 auto}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:15px;max-width:calc(100% - 32px);z-index:10}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top"><div class="brand">Times Table <b>Sprint</b></div><div class="chip" id="chip"></div></header>
+  <main id="main"></main>
+  <p class="foot">Answers are heard by your browser's speech service (Google in Chrome, Apple in Safari). Progress is saved only on this device.</p>
+</div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script>
+(() => {
+'use strict';
+
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; }
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pad = n => String(n).padStart(2, '0');
+const dayStr = (d = new Date()) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const secs = ms => (ms / 1000).toFixed(1) + ' s';
+const clock = ms => { const s = ms / 1000, m = Math.floor(s / 60); return m ? `${m}:${(s - m * 60).toFixed(1).padStart(4, '0')}` : s.toFixed(1) + ' s'; };
+const median = xs => { const a = xs.slice().sort((x, y) => x - y); return a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : null; };
+let toastT = 0;
+function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 4000); }
+
+/* ================= the plan ================= */
+// Tables open in this order. A level opens once 90% of the facts so far are fluent.
+const LEVELS = [
+  { tables: [2, 5, 10], max: 10 },
+  { tables: [3, 4], max: 10 },
+  { tables: [6], max: 10 },
+  { tables: [7, 8], max: 10 },
+  { tables: [9], max: 10 },
+  { tables: [11, 12], max: 12 },
+];
+const ROUND = 20, TIMEOUT_MS = 12000, LEVEL_UP_SHARE = 0.9;
+const tablesUpTo = lv => LEVELS.slice(0, lv + 1).flatMap(l => l.tables);
+const maxUpTo = lv => Math.max(...LEVELS.slice(0, lv + 1).map(l => l.max));
+const levelName = lv => tablesUpTo(lv).sort((a, b) => a - b).map(t => '×' + t).join(' ');
+function factsFor(lv) {
+  const T = new Set(tablesUpTo(lv)), M = maxUpTo(lv), out = [];
+  for (let a = 2; a <= M; a++) for (let b = 2; b <= M; b++) if (T.has(a) || T.has(b)) out.push(a + 'x' + b);
+  return out;
+}
+const parts = k => k.split('x').map(Number);
+
+/* ================= saved progress (this device) ================= */
+const KEY = 'times-table-sprint.v1';
+const blank = () => ({ v: 1, level: 0, fluentMs: 3000, facts: {}, rounds: [], levelUps: [], read: false });
+let S = blank();
+try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(blank(), JSON.parse(raw)); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('This browser is not letting the page save progress.'); } }
+
+// facts[k] = { n: tries, c: right, ts: last 4 attempts in ms (null = wrong/skipped), last: day }
+const isFluent = f => !!f && f.ts.length >= 2 && f.ts.slice(-2).every(t => t !== null && t < S.fluentMs);
+const typical = f => { const ok = (f && f.ts || []).filter(t => t !== null); return ok.length ? median(ok) : null; };
+function statusOf(k) {
+  const f = S.facts[k];
+  if (!f) return 'unseen';
+  if (isFluent(f)) return 'fluent';
+  return f.ts[f.ts.length - 1] === null ? 'miss' : 'slow';
+}
+function need(k) {
+  const f = S.facts[k]; if (!f) return 40;
+  const recent = f.ts.slice(-3), misses = recent.filter(t => t === null).length;
+  const t = typical(f);
+  return misses * 100 + (t ? Math.min(80, Math.max(0, (t - 1200) / 60)) : 60);
+}
+function pickRound() {
+  const all = factsFor(S.level), newest = new Set(LEVELS[S.level].tables), used = new Set(), out = [];
+  const take = (pool, n) => { for (const k of pool) { if (n <= 0) break; if (!used.has(k)) { used.add(k); out.push(k); n--; } } };
+  const touchesNewest = k => parts(k).some(x => newest.has(x)) ? 1 : 0;
+  const unseen = shuffle(all.filter(k => !S.facts[k])).sort((a, b) => touchesNewest(b) - touchesNewest(a));
+  const working = all.filter(k => S.facts[k] && !isFluent(S.facts[k])).sort((a, b) => need(b) - need(a));
+  const fluent = shuffle(all.filter(k => isFluent(S.facts[k]))).sort((a, b) => (S.facts[a].last || '').localeCompare(S.facts[b].last || ''));
+  take(working, 12); take(unseen, 3); take(fluent, 5);
+  for (const pool of [unseen, working, fluent, shuffle(all)]) take(pool, ROUND - out.length);
+  // spread out: no fact right next to its flipped twin
+  const q = shuffle(out);
+  for (let i = 1; i < q.length; i++) {
+    const [a, b] = parts(q[i - 1]);
+    if (q[i] === b + 'x' + a) { const j = (i + 2) % q.length; [q[i], q[j]] = [q[j], q[i]]; }
+  }
+  return q;
+}
+function record(k, ms, ok) {
+  const f = S.facts[k] || (S.facts[k] = { n: 0, c: 0, ts: [], last: '' });
+  f.n++; if (ok) f.c++;
+  f.ts = [...f.ts, ok ? Math.round(ms) : null].slice(-4);
+  f.last = dayStr();
+}
+function levelProgress(lv = S.level) {
+  const all = factsFor(lv), fluent = all.filter(k => isFluent(S.facts[k])).length;
+  return { fluent, total: all.length, share: fluent / all.length };
+}
+
+/* ================= hearing numbers ================= */
+const UNITS = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+const SOUNDALIKE = { to: 2, too: 2, for: 4, fore: 4, won: 1, ate: 8, tree: 3, sex: 6 }; // only trusted when that is all she said
+const TENS = { twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+function lastNumber(text) {
+  const toks = String(text).toLowerCase().replace(/(\d),(\d)/g, '$1$2').replace(/-/g, ' ').match(/\d+|[a-z]+/g) || [];
+  const short = toks.length <= 2, nums = [];
+  let cur = null, lone = false; // lone: cur is a single digit 1-9 just said
+  const flush = () => { if (cur !== null) nums.push(cur); cur = null; lone = false; };
+  for (const t of toks) {
+    if (/^\d+$/.test(t)) {
+      const v = +t;
+      if (cur === 1 && lone && v >= 10 && v <= 99) { cur = 100 + v; flush(); continue; } // "1 44" → 144
+      flush(); cur = v; lone = v >= 1 && v <= 9; continue;
+    }
+    if (t in TENS) {
+      const v = TENS[t];
+      if (cur === 1 && lone) { cur = 100 + v; lone = false; continue; }                       // "one forty" → 140
+      if (cur !== null && cur >= 100 && cur % 100 === 0) { cur += v; continue; }               // "hundred twenty"
+      flush(); cur = v; continue;
+    }
+    const u = t in UNITS ? UNITS[t] : short && t in SOUNDALIKE ? SOUNDALIKE[t] : null;
+    if (u !== null) {
+      if (cur !== null && !lone && cur % 10 === 0 && cur % 100 !== 0 && u < 10) { cur += u; continue; } // "fifty six"
+      if (cur !== null && cur >= 100 && cur % 100 === 0) { cur += u; continue; }                    // "hundred eight"
+      flush(); cur = u; lone = u >= 1 && u <= 9; continue;
+    }
+    if (t === 'hundred') { cur = (cur === null ? 1 : cur) * 100; lone = false; continue; }
+    if (t === 'a' || t === 'and') continue;
+    flush();
+  }
+  flush();
+  return nums.length ? nums[nums.length - 1] : null;
+}
+
+/* ================= microphone ================= */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const mic = {
+  r: null, on: false, ready: false, base: 0, len: 0, onheard: null, blocked: false,
+  start() {
+    if (!SR || this.r) { this.on = true; return; }
+    const r = new SR();
+    r.lang = 'en-US'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 4;
+    r.onstart = () => { this.ready = true; indicator(); };
+    r.onresult = e => { this.len = e.results.length; if (this.onheard) this.onheard(e); };
+    r.onerror = e => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { this.on = false; this.blocked = true; problem('mic'); }
+      else if (e.error === 'network') problem('network');
+    };
+    r.onend = () => { this.r = null; this.ready = false; this.base = 0; this.len = 0; indicator(); if (this.on) setTimeout(() => { if (this.on) this.start(); }, 150); };
+    this.r = r; this.on = true;
+    try { r.start(); } catch (e) {}
+  },
+  stop() { this.on = false; const r = this.r; this.r = null; this.ready = false; try { r && r.abort(); } catch (e) {} indicator(); },
+  mark() { this.base = this.len; } // anything heard before this belongs to the last question
+};
+function latest(e) { // the newest thing she said since mark(): {alts:[text], final}
+  if (e.results.length <= mic.base) return null;
+  const r = e.results[e.results.length - 1], alts = [];
+  for (let j = 0; j < r.length; j++) alts.push(r[j].transcript.trim());
+  return { alts, final: r.isFinal };
+}
+function indicator() { const d = $('#micdot'); if (d) d.classList.toggle('off', !mic.ready); }
+
+/* ================= sound + voice ================= */
+let actx = null;
+function beep(kind) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime, notes = kind === 'ok' ? [880] : kind === 'no' ? [262, 220] : kind === 'end' ? [523, 659, 784, 1047] : [660];
+    notes.forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(), at = t + i * .1;
+      o.type = kind === 'no' ? 'sine' : 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(kind === 'no' ? .07 : .12, at + .015); g.gain.exponentialRampToValueAtTime(.0001, at + .22);
+      o.connect(g).connect(actx.destination); o.start(at); o.stop(at + .25); });
+  } catch (e) {}
+}
+const tts = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+function speak(text, done) {
+  if (!tts) { done && done(); return; }
+  let fired = false; const fin = () => { if (!fired) { fired = true; done && done(); } };
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1; u.lang = 'en-US'; u.onend = fin; u.onerror = fin; speechSynthesis.speak(u); setTimeout(fin, 3500); }
+  catch (e) { fin(); }
+}
+let wake = null;
+async function keepAwake(on) {
+  try { if (on && navigator.wakeLock && !wake) wake = await navigator.wakeLock.request('screen'); else if (!on && wake) { await wake.release(); wake = null; } } catch (e) { wake = null; }
+}
+
+/* ================= views ================= */
+const main = $('#main');
+let view = 'home', run = null, last = null, problemKind = null, showCopy = false, confirmReset = false;
+function chip() {
+  const c = $('#chip'); c.replaceChildren();
+  c.append('Level ' + (S.level + 1) + ' · ', el('b', null, levelName(S.level)));
+}
+function render() { chip(); main.replaceChildren(); ({ home: viewHome, countdown: viewCountdown, q: viewQuestion, results: viewResults }[view] || viewHome)(); }
+
+function problem(kind) {
+  problemKind = kind;
+  if (view === 'q' || view === 'countdown') { endRound(false); }
+  else render();
+}
+function problemCard() {
+  const card = (b, rest) => { const c = el('div', 'card warn'); c.append(el('b', null, b), document.createTextNode(rest)); return c; };
+  if (!SR) return card('This browser can\'t listen. ', 'Open this page in Chrome, Edge or Safari to answer out loud.');
+  if (problemKind === 'mic') return card('The microphone is blocked. ', 'Allow microphone access for this page (the lock or camera icon in the address bar), then tap Start again.');
+  if (problemKind === 'network') return card('Speech recognition needs the internet. ', 'Check the connection and tap Start again.');
+  return null;
+}
+
+function viewHome() {
+  const hero = el('section', 'hero');
+  hero.append(el('h1', null, '20 questions. Say the answers.'),
+    el('p', 'lede', 'Tap Start once, then just talk. Each answer is timed, and the next round brings back the facts that were slow.'));
+  const go = el('button', 'go', 'Start'); go.dataset.act = 'start'; if (!SR) go.disabled = true;
+  hero.append(go, el('p', 'hint', 'Say “skip” to pass a question, or “stop” to end the round.'));
+  main.append(hero);
+  const p = problemCard(); if (p) main.append(p);
+  if (S.rounds.length) main.append(lastRoundCard());
+  main.append(levelCard(), factsCard());
+  if (S.rounds.length > 1) main.append(historyCard());
+  main.append(settingsCard());
+}
+function lastRoundCard() {
+  const r = S.rounds[S.rounds.length - 1], c = el('section', 'card');
+  c.append(el('h2', 'sec', 'Last round'), el('p', 'lede', `${r.c} of ${r.n} right in ${clock(r.ms)} · ${new Date(r.at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}`));
+  return c;
+}
+function levelCard(justUp) {
+  const c = el('section', 'card level' + (justUp ? ' levelup' : '')), p = levelProgress();
+  if (justUp) c.append(el('h2', null, `New tables unlocked: ${LEVELS[S.level].tables.map(t => '×' + t).join(' and ')}!`));
+  const lbl = el('div', 'lbl'); lbl.append(el('b', null, `Level ${S.level + 1}: ${levelName(S.level)}`), el('span', null, `${p.fluent} of ${p.total} facts fast`));
+  const bar = el('div', 'bar'), fill = el('i'); fill.style.width = Math.round(100 * p.share) + '%'; bar.append(fill);
+  c.append(lbl, bar);
+  c.append(el('p', 'hint', S.level < LEVELS.length - 1
+    ? `A fact is fast when it's right in under ${S.fluentMs / 1000} seconds twice in a row. At ${Math.round(LEVEL_UP_SHARE * 100)}% fast, ${LEVELS[S.level + 1].tables.map(t => '×' + t).join(' and ')} open up.`
+    : 'All the tables are open. Keep every fact fast!'));
+  return c;
+}
+function factsCard() {
+  const c = el('section', 'card'), M = maxUpTo(LEVELS.length - 1), open = new Set(factsFor(S.level));
+  c.append(el('h2', 'sec', 'Her facts'));
+  const g = el('div', 'grid'); g.style.setProperty('--n', M - 1);
+  g.append(el('div', 'h', '×'));
+  for (let b = 2; b <= M; b++) g.append(el('div', 'h', b));
+  for (let a = 2; a <= M; a++) {
+    g.append(el('div', 'h', a));
+    for (let b = 2; b <= M; b++) {
+      const k = a + 'x' + b, st = open.has(k) ? statusOf(k) : 'locked', f = S.facts[k], t = typical(f);
+      const cell = el('div', 'c ' + st, st === 'fluent' || st === 'slow' ? (t / 1000).toFixed(1) : '');
+      cell.title = `${a} × ${b} = ${a * b}` + (f ? ` · ${f.c}/${f.n} right${t ? ' · usually ' + secs(t) : ''}` : st === 'locked' ? ' · not open yet' : ' · not asked yet');
+      g.append(cell);
+    }
+  }
+  const wrap = el('div', 'gridwrap'); wrap.append(g);
+  const lg = el('div', 'legend');
+  [['fluent', 'var(--good)', '', 'Fast'], ['slow', 'var(--slow-soft)', 'var(--slow)', 'Slow'], ['miss', 'var(--miss-soft)', 'var(--miss)', 'Missed last time'], ['unseen', 'var(--unseen)', '', 'Not asked yet'], ['locked', 'transparent', 'var(--line)', 'Not open yet']]
+    .forEach(([, bg, bd, label]) => { const s = el('span'), i = el('i'); i.style.background = bg; if (bd) i.style.borderColor = bd; if (bg === 'transparent') i.style.borderStyle = 'dashed'; s.append(i, label); lg.append(s); });
+  c.append(wrap, lg, el('p', 'hint', 'Numbers show her usual time in seconds.'));
+  return c;
+}
+function historyCard() {
+  const c = el('section', 'card'), rs = S.rounds.slice(-12), maxMs = Math.max(...rs.map(r => r.ms));
+  c.append(el('h2', 'sec', 'Round times'));
+  const h = el('div', 'hist');
+  rs.forEach(r => { const d = el('div'), i = el('i'); i.style.height = Math.max(6, Math.round(80 * r.ms / maxMs)) + 'px'; i.title = `${r.c}/${r.n} in ${clock(r.ms)}`; d.append(el('span', null, Math.round(r.ms / 1000) + 's'), i, el('span', null, `${r.c}/${r.n}`)); h.append(d); });
+  c.append(h, el('p', 'hint', 'Total answer time for each round, oldest to newest, with how many were right.'));
+  return c;
+}
+function settingsCard() {
+  const c = el('section', 'card');
+  c.append(el('h2', 'sec', 'Grown-ups'));
+  const r1 = el('div', 'setrow'), p1 = el('p', null, 'Read each question out loud');
+  p1.append(el('small', null, 'Off by default: she reads it on screen, which keeps the timing fair. On, the timer starts after the question is read.'));
+  const s1 = el('div', 'seg'); [['Off', false], ['On', true]].forEach(([t, v]) => { const b = el('button', null, t); b.dataset.act = 'read'; b.dataset.v = v; b.setAttribute('aria-pressed', String(S.read === v)); s1.append(b); });
+  r1.append(p1, s1);
+  const r2 = el('div', 'setrow'), p2 = el('p', null, 'Counts as fast under');
+  p2.append(el('small', null, '3 seconds is a common goal for fact fluency.'));
+  const s2 = el('div', 'seg'); [3000, 4000, 5000].forEach(v => { const b = el('button', null, v / 1000 + ' s'); b.dataset.act = 'fluent'; b.dataset.v = v; b.setAttribute('aria-pressed', String(S.fluentMs === v)); s2.append(b); });
+  r2.append(p2, s2);
+  const r3 = el('div', 'setrow'), p3 = el('p', null, 'Share with Claude');
+  p3.append(el('small', null, 'Copies her levels, round times and every fact\'s speed, ready to paste into your chat.'));
+  const cp = el('button', 'ghost', 'Copy results for Claude'); cp.dataset.act = 'copy';
+  r3.append(p3, cp);
+  const r4 = el('div', 'setrow'), p4 = el('p', null, 'Start over');
+  p4.append(el('small', null, 'Erases all progress on this device.'));
+  let rb;
+  if (confirmReset) { rb = el('span', 'row'); const y = el('button', 'danger', 'Yes, erase'); y.dataset.act = 'reset-yes'; const n = el('button', 'ghost', 'Keep'); n.dataset.act = 'reset-no'; rb.append(y, n); }
+  else { rb = el('button', 'ghost', 'Erase progress…'); rb.dataset.act = 'reset'; }
+  r4.append(p4, rb);
+  c.append(r1, r2, r3, r4);
+  if (showCopy) { const ta = el('textarea', 'copy'); ta.value = resultsText(); ta.readOnly = true; c.append(ta); setTimeout(() => { ta.focus(); ta.select(); }, 0); }
+  return c;
+}
+
+/* ================= a round ================= */
+function startRound() {
+  problemKind = null; showCopy = false; confirmReset = false;
+  if (!SR) return;
+  mic.start(); keepAwake(true);
+  run = { facts: pickRound(), i: 0, log: [], total: 0, level: S.level };
+  view = 'countdown'; render();
+  // wait for the mic to be live (the first time the browser asks permission), then 3-2-1
+  const t0 = performance.now();
+  const wait = () => {
+    if (view !== 'countdown' || !run) return;
+    if (mic.ready) return countdown(3);
+    if (mic.blocked) return;
+    if (performance.now() - t0 > 15000) return problem('mic');
+    setTimeout(wait, 100);
+  };
+  wait();
+}
+function countdown(n) {
+  if (view !== 'countdown' || !run) return;
+  const d = $('#count'); if (d) d.textContent = n ? n : 'Go!';
+  beep(n ? 'tick' : 'ok');
+  if (n) setTimeout(() => countdown(n - 1), 700); else setTimeout(() => { if (view === 'countdown') { view = 'q'; render(); ask(); } }, 450);
+}
+function viewCountdown() {
+  const s = el('section', 'sprint'), d = el('div', 'countdown', '…'); d.id = 'count';
+  const heard = el('div', 'heard'), dot = el('span', 'mic off'); dot.id = 'micdot';
+  heard.append(dot, document.createTextNode(mic.ready ? 'Microphone on' : 'Turning on the microphone… allow it if the browser asks.'));
+  s.append(d, heard); main.append(s);
+}
+function viewQuestion() {
+  const s = el('section', 'sprint');
+  const meter = el('div', 'meter'), x = el('button', 'ghost', 'Stop'); x.dataset.act = 'stop';
+  const count = el('span', 'count'); count.id = 'qcount';
+  const tr = el('div', 'track'), fill = el('i'); fill.id = 'qfill'; tr.append(fill);
+  const w = el('span', 'watch'); w.id = 'watch';
+  meter.append(x, count, tr, w);
+  const eq = el('div', 'eq'); eq.id = 'eq';
+  const heard = el('div', 'heard'), dot = el('span', 'mic' + (mic.ready ? '' : ' off')); dot.id = 'micdot';
+  const ht = el('span'); ht.id = 'heard'; heard.append(dot, ht);
+  const fb = el('div', 'fb'); fb.id = 'fb';
+  s.append(meter, eq, heard, fb); main.append(s);
+}
+let tickT = 0;
+function ask() {
+  if (!run || view !== 'q') return;
+  const k = run.facts[run.i], [a, b] = parts(k);
+  const q = run.q = { k, a, b, ans: a * b, start: 0, done: false, heardAt: 0, stable: 0, live: false };
+  $('#qcount').textContent = `${run.i + 1} / ${run.facts.length}`;
+  $('#qfill').style.width = (100 * run.i / run.facts.length) + '%';
+  const eq = $('#eq'); eq.className = 'eq'; eq.replaceChildren(el('span', null, a), el('span', null, '×'), el('span', null, b), el('span', null, '='), Object.assign(el('span', 'ans', '?'), { id: 'ans' }));
+  $('#heard').textContent = 'listening…'; $('#fb').textContent = ''; $('#fb').className = 'fb';
+  const go = () => { if (run && run.q === q && !q.done) { q.start = performance.now(); q.live = true; mic.mark(); q.timer = setTimeout(() => timeUp(q), TIMEOUT_MS); } };
+  if (S.read) speak(`${a} times ${b}`, go); else go();
+  clearInterval(tickT); tickT = setInterval(paintWatch, 100);
+}
+function paintWatch() {
+  const w = $('#watch'); if (!w || !run) return;
+  const q = run.q, cur = q && q.live && !q.done ? performance.now() - q.start : 0;
+  w.textContent = clock(run.total + cur);
+}
+mic.onheard = e => {
+  const h = latest(e); if (!h) return;
+  if (view === 'results' && h.final && h.alts.some(t => /\b(again|start|go|yes|play)\b/i.test(t))) { startRound(); return; }
+  if (view !== 'q' || !run || !run.q || !run.q.live || run.q.done) return;
+  const q = run.q, now = performance.now();
+  const ht = $('#heard'); if (ht) ht.textContent = '“' + h.alts[0] + '”';
+  const said = h.alts.map(lastNumber);
+  if (said.includes(q.ans)) {
+    if (!q.heardAt) q.heardAt = now;
+    clearTimeout(q.stable);
+    if (h.final) return answer(q, true, q.ans);
+    q.stable = setTimeout(() => { if (!q.done) answer(q, true, q.ans); }, 900); // no final yet: trust a steady match
+    return;
+  }
+  q.heardAt = 0; clearTimeout(q.stable);
+  if (S.read && h.alts.every(t => /times/i.test(t))) return; // the page's own voice reading the question
+  if (!h.final) return;
+  const text = h.alts[0].toLowerCase();
+  if (/\b(stop|quit)\b/.test(text)) return endRound(true);
+  if (/\b(skip|pass|next|don'?t know|no idea)\b/.test(text)) return answer(q, false, null, 'skipped');
+  if (/\b(repeat|what)\b/.test(text) && S.read) return speak(`${q.a} times ${q.b}`);
+  const n = said.find(v => v !== null);
+  if (n !== undefined && n !== null) answer(q, false, n);
+};
+function timeUp(q) { if (run && run.q === q && !q.done) answer(q, false, null, 'time'); }
+function answer(q, ok, said, why) {
+  if (q.done) return;
+  q.done = true; clearTimeout(q.timer); clearTimeout(q.stable);
+  const end = ok && q.heardAt ? q.heardAt : performance.now();
+  const ms = Math.min(TIMEOUT_MS, Math.max(200, end - q.start));
+  run.total += ms;
+  run.log.push({ f: q.k, ms: Math.round(ms), ok, said });
+  record(q.k, ms, ok);
+  const eq = $('#eq'), ans = $('#ans'), fb = $('#fb');
+  if (ans) ans.textContent = q.ans;
+  if (eq) eq.classList.add(ok ? 'ok' : 'no');
+  if (ok) { fb.textContent = secs(ms); fb.className = 'fb ok'; beep('ok'); }
+  else { fb.textContent = why === 'time' ? 'Time’s up' : why === 'skipped' ? 'Skipped' : `You said ${said}`; fb.className = 'fb no'; beep('no'); if (S.read) speak(`${q.a} times ${q.b} is ${q.ans}`); }
+  paintWatch();
+  setTimeout(() => { if (!run || run.q !== q) return; run.i++; if (run.i >= run.facts.length) endRound(true); else ask(); }, ok ? 550 : 2200);
+}
+function endRound(finished) {
+  clearInterval(tickT);
+  const r = run; run = null;
+  if (r && r.q) { r.q.done = true; clearTimeout(r.q.timer); clearTimeout(r.q.stable); }
+  keepAwake(false);
+  if (!r || !r.log.length) { mic.stop(); view = 'home'; save(); render(); return; }
+  const c = r.log.filter(x => x.ok).length, before = S.level;
+  S.rounds = [...S.rounds, { at: new Date().toISOString(), lvl: r.level + 1, n: r.log.length, c, ms: Math.round(r.total), full: finished && r.log.length === r.facts.length, log: r.log }].slice(-60);
+  let up = false;
+  if (S.level < LEVELS.length - 1 && levelProgress().share >= LEVEL_UP_SHARE) { S.level++; up = true; S.levelUps = [...S.levelUps, { at: new Date().toISOString(), to: S.level + 1 }]; }
+  save();
+  last = { r: S.rounds[S.rounds.length - 1], prev: S.rounds.filter(x => x.full).slice(-2, -1)[0], up, before };
+  beep('end');
+  view = 'results'; render();
+  if (S.read) speak(up ? 'New tables unlocked!' : `${c} out of ${r.log.length}. Say again to play another round.`);
+}
+function viewResults() {
+  const { r, prev, up } = last;
+  const head = el('section', 'hero');
+  head.append(el('h1', null, r.c === r.n ? 'Perfect round!' : r.c >= r.n - 2 ? 'Great round!' : 'Round done!'));
+  const again = el('button', 'go', 'Again'); again.dataset.act = 'start';
+  head.append(again, el('p', 'hint', 'Or just say “again”.'));
+  main.append(head);
+  const st = el('section', 'stats');
+  const avg = r.ms / r.n;
+  const big = el('div', 'stat big'); big.append(el('span', null, 'Total time'), el('b', null, clock(r.ms)));
+  if (prev && r.n === prev.n) { const d = r.ms - prev.ms, sm = el('small', d < 0 ? 'better' : 'worse', `${secs(Math.abs(d))} ${d < 0 ? 'faster' : 'slower'} than last time`); big.append(sm); }
+  const right = el('div', 'stat'); right.append(el('span', null, 'Right'), el('b', null, `${r.c} / ${r.n}`));
+  const av = el('div', 'stat'); av.append(el('span', null, 'Per question'), el('b', null, secs(avg)));
+  st.append(big, right, av); main.append(st);
+  if (up) main.append(levelCard(true));
+  const slow = r.log.slice().sort((a, b) => (a.ok === b.ok ? b.ms - a.ms : a.ok ? 1 : -1)).slice(0, 5);
+  const sc = el('section', 'card'); sc.append(el('h2', 'sec', 'Slowest this round'));
+  const ul = el('ul', 'slowlist'), mx = Math.max(...slow.map(x => x.ms));
+  slow.forEach(x => { const [a, b] = parts(x.f), li = el('li'); const bar = el('i', 'b' + (x.ok ? '' : ' miss')); bar.style.width = Math.max(6, Math.round(100 * x.ms / mx)) + '%';
+    li.append(el('span', 'f', `${a}×${b}`), bar, el('span', 't', x.ok ? secs(x.ms) : x.said == null ? '—' : `said ${x.said}`)); ul.append(li); });
+  sc.append(ul, el('p', 'hint', 'These come back more often next round.'));
+  main.append(sc);
+  if (!up) main.append(levelCard());
+  main.append(factsCard());
+  if (S.rounds.length > 1) main.append(historyCard());
+  main.append(settingsCard());
+}
+
+/* ================= sharing with Claude ================= */
+function resultsText() {
+  const p = levelProgress(), rs = S.rounds.slice(-15);
+  const factLines = Object.entries(S.facts).map(([k, f]) => { const t = typical(f); return `${k.replace('x', '×')} ${f.c}/${f.n}${t ? ' ~' + (t / 1000).toFixed(1) + 's' : ''} [${statusOf(k)}]`; });
+  return [
+    'Times Table Sprint results (paste into Claude)',
+    `Level ${S.level + 1}: ${levelName(S.level)} | ${p.fluent}/${p.total} facts fast (under ${S.fluentMs / 1000}s twice in a row)`,
+    `Rounds (${S.rounds.length} total, newest last):`,
+    ...rs.map(r => `  ${r.at.slice(0, 16).replace('T', ' ')}  L${r.lvl}  ${r.c}/${r.n}  ${clock(r.ms)}${r.full ? '' : ' (stopped early)'}`),
+    `Facts (right/asked, usual time, status):`,
+    '  ' + factLines.join('; '),
+    'Data: ' + JSON.stringify({ level: S.level, fluentMs: S.fluentMs, facts: S.facts, rounds: S.rounds.slice(-15).map(({ log, ...r }) => ({ ...r, log: log.map(x => [x.f, x.ms, x.ok ? 1 : 0, x.said]) })), levelUps: S.levelUps })
+  ].join('\n');
+}
+async function copyResults() {
+  const text = resultsText();
+  try { await navigator.clipboard.writeText(text); toast('Copied. Paste it into your chat with Claude.'); }
+  catch (e) { showCopy = true; render(); toast('Select the text below and copy it.'); }
+}
+
+/* ================= wiring ================= */
+const actions = {
+  start: () => startRound(),
+  stop: () => endRound(false),
+  read: t => { S.read = t.dataset.v === 'true'; save(); render(); },
+  fluent: t => { S.fluentMs = Number(t.dataset.v); save(); render(); },
+  copy: () => copyResults(),
+  reset: () => { confirmReset = true; render(); },
+  'reset-no': () => { confirmReset = false; render(); },
+  'reset-yes': () => { mic.stop(); S = blank(); save(); confirmReset = false; last = null; view = 'home'; render(); },
+};
+document.addEventListener('click', e => { const t = e.target instanceof Element && e.target.closest('[data-act]'); if (t && actions[t.dataset.act]) actions[t.dataset.act](t); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && (view === 'q' || view === 'countdown')) endRound(false); });
+
+window.__tts = { lastNumber, pickRound, factsFor, levelProgress, record, get S() { return S; } };
+render();
+})();
+</script>
+</body>
+</html>
