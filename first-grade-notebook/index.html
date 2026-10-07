@@ -249,6 +249,7 @@ function normLesson(id, d) {
   const items = d.items.map(normItem).filter(Boolean);
   if (!items.length) return null;
   const seen = new Set(); items.forEach((it, i) => { if (seen.has(it.id)) it.id += '_' + i; seen.add(it.id); });
+  speech.learn(d.audio);
   return { id, title: str(d.title, 90) || 'Today', date: /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : '0000-00-00', cover: str(d.cover, 24), items };
 }
 
@@ -306,17 +307,57 @@ function dueReviews(today, focusId, n) {
 }
 
 /* ---------------- speech + sound ---------------- */
+// Recorded lines (ElevenLabs voice "Jessica") are published with the page under audio/. A lesson lists its own
+// recordings in lesson.audio as [{t: exact text, f: "audio/<lessonId>/NN.mp3"}]. Any line without a recording,
+// or one that fails to load, falls back to the device voice.
+const COMMON_AUDIO = [ // recorded shared lines; PRAISE below lists every cheer, recorded or not
+  ['Great job!', 'audio/common/great-job.mp3'], ["That's right!", 'audio/common/thats-right.mp3'],
+  ['Remember these? A few questions from before.', 'audio/common/remember-these.mp3'],
+  ['All done! Great work today. See you tomorrow!', 'audio/common/all-done.mp3'],
+];
 const speech = {
-  ok: typeof window.speechSynthesis !== 'undefined' && typeof window.SpeechSynthesisUtterance !== 'undefined',
-  on: prefs.get('read', true), voice: null,
+  tts: typeof window.speechSynthesis !== 'undefined' && typeof window.SpeechSynthesisUtterance !== 'undefined',
+  on: prefs.get('read', true), voice: null, clips: new Map(COMMON_AUDIO), player: null, cur: 0,
+  has(t) { return !!t && (this.tts || this.clips.has(t)); },
+  learn(list) {
+    if (!Array.isArray(list)) return;
+    for (const a of list) if (a && typeof a.t === 'string' && typeof a.f === 'string' && /^audio\/[\w\-./]+\.mp3$/.test(a.f) && !a.f.includes('..')) this.clips.set(a.t, a.f);
+  },
   pickVoice() { try { const vs = speechSynthesis.getVoices().filter(v => /^en(-|_)/i.test(v.lang)); this.voice = vs.find(v => /Samantha|Google US English|Jenny|Aria|Ava/i.test(v.name)) || vs.find(v => /en-US/i.test(v.lang)) || vs[0] || null; } catch (e) {} },
   say(t, force) {
-    if (!this.ok || (!this.on && !force) || !t) return;
-    try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(sayify(t)); u.rate = .88; u.pitch = 1.05; u.lang = 'en-US'; if (this.voice) u.voice = this.voice; speechSynthesis.speak(u); } catch (e) {}
+    if ((!this.on && !force) || !t) return;
+    this.stop();
+    const id = ++this.cur, f = this.clips.get(t);
+    if (f) this.play(f, t, id); else this.device(t);
   },
-  stop() { try { if (this.ok) speechSynthesis.cancel(); } catch (e) {} }
+  device(t) {
+    if (!this.tts) return;
+    try { const u = new SpeechSynthesisUtterance(sayify(t)); u.rate = .88; u.pitch = 1.05; u.lang = 'en-US'; if (this.voice) u.voice = this.voice; speechSynthesis.speak(u); } catch (e) {}
+  },
+  play(f, t, id) {
+    // one reused element: once a tap has started it, phones let it keep playing later lines
+    try {
+      const a = this.player || (this.player = new Audio());
+      let retried = false;
+      const retry = async () => {
+        if (retried || id !== this.cur) return; retried = true;
+        try {
+          const r = await fetch(f); if (!r.ok) throw new Error('HTTP ' + r.status);
+          const u = URL.createObjectURL(await r.blob()); if (id !== this.cur) return;
+          a.onerror = () => { if (id === this.cur) this.device(t); }; a.src = u; await a.play();
+        } catch (e) { if (id === this.cur) this.device(t); }
+      };
+      a.onerror = retry; a.src = f;
+      const p = a.play(); if (p && p.catch) p.catch(e => { if (!(e && e.name === 'AbortError')) retry(); });
+    } catch (e) { this.device(t); }
+  },
+  stop() {
+    this.cur++;
+    try { if (this.player) this.player.pause(); } catch (e) {}
+    try { if (this.tts) speechSynthesis.cancel(); } catch (e) {}
+  }
 };
-if (speech.ok) { speech.pickVoice(); try { speechSynthesis.addEventListener('voiceschanged', () => speech.pickVoice()); } catch (e) {} }
+if (speech.tts) { speech.pickVoice(); try { speechSynthesis.addEventListener('voiceschanged', () => speech.pickVoice()); } catch (e) {} }
 const sayify = t => String(t).replace(/−/g, ' minus ').replace(/\s\+\s/g, ' plus ').replace(/\s=\s\?/g, ' equals what?').replace(/\s=\s/g, ' equals ').replace(/\?{2,}/g, '?');
 let actx = null;
 function chime(kind) {
@@ -365,8 +406,8 @@ function renderShow(s) {
   switch (s.type) {
     case 'emoji': { const w = el('div'); w.append(el('div', 's-emoji', str(s.value, 24))); if (s.caption) w.append(el('div', 's-cap', str(s.caption, 80))); return w; }
     case 'word': return el('div', 's-word', str(s.value, 60));
-    case 'sentence': { const w = el('div', 's-sentence'); w.append(el('p', null, str(s.value, 300))); if (speech.ok) w.append(hearBtn(str(s.value, 300), 'Read it to me', true)); return w; }
-    case 'hear': return speech.ok ? hearBtn(str(s.value, 120), 'Hear it') : el('div', 's-word', str(s.value, 60));
+    case 'sentence': { const w = el('div', 's-sentence'); w.append(el('p', null, str(s.value, 300))); if (speech.has(str(s.value, 300))) w.append(hearBtn(str(s.value, 300), 'Read it to me', true)); return w; }
+    case 'hear': return speech.has(str(s.value, 120)) ? hearBtn(str(s.value, 120), 'Hear it') : el('div', 's-word', str(s.value, 60));
     case 'count': {
       const n = clamp(s.n, 0, 20), e = str(s.emoji, 24) || '●', f = el('div', 'frames');
       for (let i = 0; i < (n > 10 ? 2 : 1); i++) { const fr = el('div', 'frame'); for (let c = 0; c < 10; c++) fr.append(el('span', null, i * 10 + c < n ? e : '')); f.append(fr); }
@@ -478,7 +519,7 @@ function viewStep() {
   const it = step.it, long = it.prompt.length > 70;
   const prow = el('div', 'prow');
   if (it.prompt) { const p = el('h2', 'prompt' + (long ? ' long' : ''), it.prompt); prow.append(p); }
-  if (speech.ok && (it.prompt || it.say)) { const r = el('button', 'replay'); r.dataset.act = 'replay'; r.setAttribute('aria-label', 'Read it again'); r.append(iconEl('speak')); prow.append(r); }
+  if (speech.has(it.say || it.prompt)) { const r = el('button', 'replay'); r.dataset.act = 'replay'; r.setAttribute('aria-label', 'Read it again'); r.append(iconEl('speak')); prow.append(r); }
   if (prow.childNodes.length) w.append(prow);
   if (it.show.length) { const sh = el('div', 'shows'); it.show.forEach(x => sh.append(renderShow(x))); w.append(sh); }
   if (it.text) w.append(el('p', 'text', it.text));
@@ -506,7 +547,7 @@ function viewStep() {
   stage.append(w);
   speakSoon(it.say || it.prompt);
 }
-function speakSoon(t) { const s = app.s, i = s && s.i; setTimeout(() => { if (app.view === 'step' && app.s === s && s.i === i) speech.say(t); }, 250); }
+function speakSoon(t) { speech.say(t); } // straight away, while the tap that got here still counts as a user gesture
 function record(step, ok) {
   const s = app.s, key = step.lid + '|' + step.it.id;
   if (!step.again && !(key in s.first)) { s.first[key] = ok; s.scored++; if (ok) s.right++; }
@@ -520,7 +561,7 @@ function answer(btn) {
   stage.querySelectorAll('.choice').forEach(b => { b.disabled = true; if (b.dataset.v === it.answer) b.classList.add('right'); else if (b === btn) b.classList.add('wrong'); else b.classList.add('dim'); });
   const fb = $('#fb'), msg = el('span', 'msg'), next = el('button', 'go sm', s.i === s.steps.length - 1 ? 'Finish' : 'Next'); next.dataset.act = 'next';
   if (ok) {
-    const p = pick(PRAISE); msg.append(el('span', 'yay', p)); chime(true); speech.say(p);
+    const voiced = PRAISE.filter(x => speech.clips.has(x)), p = pick(voiced.length ? voiced : PRAISE); msg.append(el('span', 'yay', p)); chime(true); speech.say(p);
     const tok = ++s.token; setTimeout(() => { if (app.view === 'step' && app.s === s && s.token === tok && s.answered) nextStep(); }, 1500);
   } else {
     const right = it.choices.find(c => c.text === it.answer), why = it.explain || `The answer is ${right.text}.`;
@@ -562,7 +603,7 @@ function finish() {
   const s = app.s; persist(s, true);
   app.end = { right: s.right, scored: s.scored }; app.view = 'end'; render();
   chime('end');
-  speech.say(s.scored ? `All done! You got ${s.right} out of ${s.scored}.` : 'All done!');
+  speech.say('All done! Great work today. See you tomorrow!');
 }
 function viewEnd() {
   const w = el('div', 'end'), e = app.end;
@@ -620,10 +661,10 @@ function viewGrownups() {
   const seg = el('div', 'seg'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Review questions');
   [0, 3, 5].forEach(n => { const b = el('button', null, n === 0 ? 'None' : n); b.dataset.act = 'set-review'; b.dataset.n = n; b.setAttribute('aria-pressed', String(reviewCount() === n)); seg.append(b); });
   r1.append(p1, seg);
-  const r2 = el('div', 'setrow'), p2 = el('p', null, 'Read questions out loud'); p2.append(el('small', null, 'Uses this device\'s voice.'));
+  const r2 = el('div', 'setrow'), p2 = el('p', null, 'Read questions out loud'); p2.append(el('small', null, 'Lessons use the recorded voice. Anything without a recording uses this device\'s voice.'));
   const seg2 = el('div', 'seg'); [['On', true], ['Off', false]].forEach(([t, v]) => { const b = el('button', null, t); b.dataset.act = 'set-read'; b.dataset.v = v; b.setAttribute('aria-pressed', String(speech.on === v)); seg2.append(b); });
   r2.append(p2, seg2);
-  if (speech.ok) sec4.append(r1, r2); else sec4.append(r1);
+  if (speech.tts || speech.clips.size) sec4.append(r1, r2); else sec4.append(r1);
   w.append(sec4);
   stage.append(w);
 }

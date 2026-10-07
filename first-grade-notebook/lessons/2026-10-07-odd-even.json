@@ -8,7 +8,11 @@
       "kind": "card",
       "prompt": "Even numbers can make pairs. Everyone gets a partner!",
       "say": "Even numbers can make pairs. Everyone gets a partner! 6 shoes make 3 pairs, so 6 is even.",
-      "show": { "type": "pairs", "emoji": "👟", "n": 6 },
+      "show": {
+        "type": "pairs",
+        "emoji": "👟",
+        "n": 6
+      },
       "text": "6 shoes make 3 pairs. 6 is even."
     },
     {
@@ -16,30 +20,55 @@
       "kind": "card",
       "prompt": "Odd numbers always have one left over.",
       "say": "Odd numbers always have one left over. Look, one shoe has no partner. So 5 is odd.",
-      "show": { "type": "pairs", "emoji": "👟", "n": 5 },
+      "show": {
+        "type": "pairs",
+        "emoji": "👟",
+        "n": 5
+      },
       "text": "One shoe has no partner. 5 is odd."
     },
     {
       "id": "four",
       "prompt": "Is 4 even or odd?",
-      "show": { "type": "pairs", "emoji": "🍎", "n": 4 },
-      "choices": ["even", "odd"],
+      "show": {
+        "type": "pairs",
+        "emoji": "🍎",
+        "n": 4
+      },
+      "choices": [
+        "even",
+        "odd"
+      ],
       "answer": "even",
       "explain": "4 makes 2 pairs with none left over, so 4 is even."
     },
     {
       "id": "seven",
       "prompt": "Is 7 even or odd?",
-      "show": { "type": "pairs", "emoji": "🐞", "n": 7 },
-      "choices": ["even", "odd"],
+      "show": {
+        "type": "pairs",
+        "emoji": "🐞",
+        "n": 7
+      },
+      "choices": [
+        "even",
+        "odd"
+      ],
       "answer": "odd",
       "explain": "7 makes 3 pairs and 1 is left over, so 7 is odd."
     },
     {
       "id": "ten",
       "prompt": "Is 10 even or odd?",
-      "show": { "type": "pairs", "emoji": "🐧", "n": 10 },
-      "choices": ["even", "odd"],
+      "show": {
+        "type": "pairs",
+        "emoji": "🐧",
+        "n": 10
+      },
+      "choices": [
+        "even",
+        "odd"
+      ],
       "answer": "even",
       "explain": "10 makes 5 pairs with none left over, so 10 is even."
     },
@@ -48,29 +77,58 @@
       "kind": "card",
       "prompt": "Count by 2s to say the even numbers!",
       "say": "Count by twos: 2, 4, 6, 8, 10. These are the even numbers. The numbers in between, 1, 3, 5, 7, 9, are odd.",
-      "show": { "type": "sequence", "values": ["2", "4", "6", "8", "10"] },
+      "show": {
+        "type": "sequence",
+        "values": [
+          "2",
+          "4",
+          "6",
+          "8",
+          "10"
+        ]
+      },
       "text": "The numbers in between are odd: 1, 3, 5, 7, 9."
     },
     {
       "id": "next-even",
       "prompt": "Count by 2s. What comes next?",
       "say": "Count by twos. 2, 4, 6, what comes next?",
-      "show": { "type": "sequence", "values": ["2", "4", "6", "?"] },
-      "choices": ["7", "8", "9"],
+      "show": {
+        "type": "sequence",
+        "values": [
+          "2",
+          "4",
+          "6",
+          "?"
+        ]
+      },
+      "choices": [
+        "7",
+        "8",
+        "9"
+      ],
       "answer": "8",
       "explain": "2, 4, 6, 8. Each even number is 2 more."
     },
     {
       "id": "which-even",
       "prompt": "Which number is even?",
-      "choices": ["3", "8", "5"],
+      "choices": [
+        "3",
+        "8",
+        "5"
+      ],
       "answer": "8",
       "explain": "8 makes 4 pairs. Count by 2s: 2, 4, 6, 8!"
     },
     {
       "id": "which-odd",
       "prompt": "Which number is odd?",
-      "choices": ["6", "9", "4"],
+      "choices": [
+        "6",
+        "9",
+        "4"
+      ],
       "answer": "9",
       "explain": "9 always has one left over. 1, 3, 5, 7, 9 are odd."
     },
@@ -78,8 +136,15 @@
       "id": "thirteen",
       "prompt": "Is 13 even or odd?",
       "say": "Here is a big one. Is 13 even or odd?",
-      "show": { "type": "pairs", "emoji": "🧁", "n": 13 },
-      "choices": ["even", "odd"],
+      "show": {
+        "type": "pairs",
+        "emoji": "🧁",
+        "n": 13
+      },
+      "choices": [
+        "even",
+        "odd"
+      ],
       "answer": "odd",
       "explain": "13 makes 6 pairs and 1 is left over, so 13 is odd."
     },
@@ -88,7 +153,75 @@
       "kind": "check",
       "prompt": "Count to 10 out loud. Clap on every even number!",
       "say": "Stand up! Count to 10 out loud, and clap on every even number: 2, 4, 6, 8, 10!",
-      "show": { "type": "sequence", "values": ["1", "2 👏", "3", "4 👏", "5", "6 👏", "7", "8 👏", "9", "10 👏"] }
+      "show": {
+        "type": "sequence",
+        "values": [
+          "1",
+          "2 👏",
+          "3",
+          "4 👏",
+          "5",
+          "6 👏",
+          "7",
+          "8 👏",
+          "9",
+          "10 👏"
+        ]
+      }
+    }
+  ],
+  "audio": [
+    {
+      "t": "Even numbers can make pairs. Everyone gets a partner! 6 shoes make 3 pairs, so 6 is even.",
+      "f": "audio/2026-10-07-odd-even/01.mp3"
+    },
+    {
+      "t": "Odd numbers always have one left over. Look, one shoe has no partner. So 5 is odd.",
+      "f": "audio/2026-10-07-odd-even/02.mp3"
+    },
+    {
+      "t": "Is 4 even or odd?",
+      "f": "audio/2026-10-07-odd-even/03.mp3"
+    },
+    {
+      "t": "Is 7 even or odd?",
+      "f": "audio/2026-10-07-odd-even/05.mp3"
+    },
+    {
+      "t": "Not quite. 7 makes 3 pairs and 1 is left over, so 7 is odd.",
+      "f": "audio/2026-10-07-odd-even/06.mp3"
+    },
+    {
+      "t": "Is 10 even or odd?",
+      "f": "audio/2026-10-07-odd-even/07.mp3"
+    },
+    {
+      "t": "Not quite. 10 makes 5 pairs with none left over, so 10 is even.",
+      "f": "audio/2026-10-07-odd-even/08.mp3"
+    },
+    {
+      "t": "Not quite. 2, 4, 6, 8. Each even number is 2 more.",
+      "f": "audio/2026-10-07-odd-even/11.mp3"
+    },
+    {
+      "t": "Which number is odd?",
+      "f": "audio/2026-10-07-odd-even/14.mp3"
+    },
+    {
+      "t": "Not quite. 9 always has one left over. 1, 3, 5, 7, 9 are odd.",
+      "f": "audio/2026-10-07-odd-even/15.mp3"
+    },
+    {
+      "t": "Here is a big one. Is 13 even or odd?",
+      "f": "audio/2026-10-07-odd-even/16.mp3"
+    },
+    {
+      "t": "Not quite. 13 makes 6 pairs and 1 is left over, so 13 is odd.",
+      "f": "audio/2026-10-07-odd-even/17.mp3"
+    },
+    {
+      "t": "Stand up! Count to 10 out loud, and clap on every even number: 2, 4, 6, 8, 10!",
+      "f": "audio/2026-10-07-odd-even/18.mp3"
     }
   ]
 }

@@ -18,6 +18,7 @@ The page records her answers and brings earlier questions back for review.
 4. **Publish it** with `ArtifactData` `set`, using `collection: "lessons"`, `doc_id: <id>` and `file_path` pointing to the JSON file.
    Leave the `id` field out of the document body, or keep it equal to `doc_id`.
 5. **Commit** the JSON file so the repo keeps a history of every lesson.
+6. **Record the voice** (see [Voice](#voice-elevenlabs) below). Do this before step 4 when you can, so the lesson goes in once with its recordings.
 
 Never edit `progress/*` or `stats/main` by hand. The page owns them.
 Never change an item `id` after a lesson has been used, because her progress is keyed by it.
@@ -71,6 +72,8 @@ Each question has a level from 0 to 5.
 | `answer` | Must equal exactly one choice's text. |
 | `explain` | Shown and read after a wrong answer. |
 
+A lesson can also carry `audio`: a list of `{ "t": exact text, "f": "audio/<lessonId>/NN.mp3" }` written by `voice-lines.mjs --apply`.
+
 ### Show types
 
 | type | fields | renders |
@@ -87,6 +90,27 @@ Each question has a level from 0 to 5.
 | `shape` | `name` (circle, oval, triangle, square, rectangle, rhombus, trapezoid, pentagon, hexagon, octagon) | the shape |
 | `blocks` | `n` (0–99) | base-ten rods and cubes |
 | `dots` | `a`, plus `b` to add a second color, or `cross` to cross some out | dots for adding or taking away |
+
+## Voice (ElevenLabs)
+
+The parent chose the ElevenLabs voice **Jessica** (`voice_id` `cgSgspJ2msm6clMCkdW9`), model `eleven_multilingual_v2`, **one take per line** (`generations_count: 1`).
+Recordings are published with the page as files under `audio/`. They are not kept in git (`audio/` is in `.gitignore`); the artifact holds them.
+Any line without a recording falls back to the device voice.
+
+1. `node first-grade-notebook/voice-lines.mjs first-grade-notebook/lessons/<id>.json` lists every line the page will say (`t`) and its file (`f`).
+   The text must match exactly, so always take it from this script.
+2. Record each line with the ElevenLabs connector's `creative_generate_speech`, in the flow "First Grade Notebook – voice lines" (`W3SvrtMFoK0PZehdq4BG`).
+   Poll `creative_get_flow_run_status`, then download each `content_url` to `first-grade-notebook/<f>`. The links expire after 2 hours.
+3. `node first-grade-notebook/voice-lines.mjs first-grade-notebook/lessons/<id>.json --apply` adds an `audio` list to the lesson for the files that exist.
+4. Publish `index.html` with `files` mapping each new `audio/...` path to its local file.
+   Files from earlier lessons stay published automatically. Never pass `null` for them.
+5. Write the lesson to the database (step 4 of the routine; pass `if_version` if it already exists).
+
+`node first-grade-notebook/voice-lines.mjs --common` lists the shared lines (cheers, "Remember these?", "All done!").
+When one of them is recorded, also add it to `COMMON_AUDIO` in `index.html`.
+
+**Status (2026-10-07):** ElevenLabs disabled the account's free tier partway through recording ("unusual activity… upgrade to a paid subscription").
+Still unrecorded: Odd and Even lines 04, 09, 10, 12 and 13, and the cheers "Yes!", "You got it!" and "Nice work!".
 
 ## Other documents
 
