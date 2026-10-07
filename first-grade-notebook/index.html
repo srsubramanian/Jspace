@@ -56,6 +56,7 @@ h1,h2{margin:0;text-wrap:balance}
 .title{font:800 clamp(40px,8.5vw,64px)/1.05 var(--f-display);max-width:16ch;margin-bottom:14px}
 .donemark{display:flex;align-items:center;gap:10px;color:var(--good);font:800 24px/1 var(--f-display)}
 .donemark svg{width:30px;height:30px}
+.ck{stroke:var(--bg)}
 .note{color:var(--muted);max-width:40ch;margin:0}
 
 /* a step */
@@ -204,7 +205,8 @@ h1,h2{margin:0;text-wrap:balance}
 
 const $ = (s, root = document) => root.querySelector(s);
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; }
-function fromMarkup(m) { const t = document.createElement('template'); t.innerHTML = m.trim(); return t.content.firstChild; } // only ever fed numbers and fixed strings
+const SVGNS = 'http://www.w3.org/2000/svg';
+function svg(tag, attrs, kids) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, String(attrs[k])); if (kids) kids.forEach(c => e.appendChild(c)); return e; }
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.round(Number(v) || 0)));
 const clone = o => JSON.parse(JSON.stringify(o));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -219,12 +221,12 @@ const prefs = {
   set(k, v) { try { localStorage.setItem('fgn.' + k, JSON.stringify(v)); } catch (e) {} }
 };
 const ICON = {
-  speak: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.2v5.6h3.9l5 4V5.2l-5 4z" fill="currentColor"/><path d="M15.6 8.6a4.8 4.8 0 0 1 0 6.8M18.2 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-  close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>',
-  check: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M6.5 12.5l3.6 3.4 7.4-7.6" fill="none" stroke="var(--bg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.95 6.07 6.65.86-4.88 4.6 1.23 6.6L12 17.3l-5.95 3.23 1.23-6.6-4.88-4.6 6.65-.86z"/></svg>'
+  speak: () => [svg('path', { d: 'M3.5 9.2v5.6h3.9l5 4V5.2l-5 4z', fill: 'currentColor' }), svg('path', { d: 'M15.6 8.6a4.8 4.8 0 0 1 0 6.8M18.2 6a8.5 8.5 0 0 1 0 12', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' })],
+  close: () => [svg('path', { d: 'M5 5l14 14M19 5L5 19', stroke: 'currentColor', 'stroke-width': 3, 'stroke-linecap': 'round' })],
+  check: () => [svg('circle', { cx: 12, cy: 12, r: 11, fill: 'currentColor' }), svg('path', { class: 'ck', d: 'M6.5 12.5l3.6 3.4 7.4-7.6', fill: 'none', 'stroke-width': 2.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })],
+  star: () => [svg('path', { d: 'M12 2.4l2.95 6.07 6.65.86-4.88 4.6 1.23 6.6L12 17.3l-5.95 3.23 1.23-6.6-4.88-4.6 6.65-.86z' })]
 };
-const iconEl = (name, cls) => { const s = fromMarkup(ICON[name]); if (cls) s.setAttribute('class', cls); return s; };
+const iconEl = (name, cls) => { const e = svg('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' }, ICON[name]()); if (cls) e.setAttribute('class', cls); return e; };
 
 /* ---------------- lesson data: normalize whatever is in the store ---------------- */
 const SHOW_TYPES = new Set(['emoji', 'word', 'sentence', 'hear', 'count', 'pairs', 'equation', 'sequence', 'clock', 'shape', 'blocks', 'dots']);
@@ -330,30 +332,30 @@ function chime(kind) {
 
 /* ---------------- visuals ---------------- */
 const SHAPES = {
-  circle: '<circle cx="100" cy="82" r="66"/>', oval: '<ellipse cx="100" cy="82" rx="86" ry="52"/>',
-  triangle: '<polygon points="100,14 182,150 18,150"/>', square: '<rect x="34" y="16" width="132" height="132"/>',
-  rectangle: '<rect x="12" y="36" width="176" height="92"/>', rhombus: '<polygon points="100,8 160,82 100,156 40,82"/>',
-  trapezoid: '<polygon points="62,32 138,32 188,140 12,140"/>',
-  pentagon: `<polygon points="${poly(5, 74, 100, 88, -90)}"/>`, hexagon: `<polygon points="${poly(6, 74, 100, 82, 0)}"/>`,
-  octagon: `<polygon points="${poly(8, 74, 100, 82, 22.5)}"/>`
+  circle: ['circle', { cx: 100, cy: 82, r: 66 }], oval: ['ellipse', { cx: 100, cy: 82, rx: 86, ry: 52 }],
+  triangle: ['polygon', { points: '100,14 182,150 18,150' }], square: ['rect', { x: 34, y: 16, width: 132, height: 132 }],
+  rectangle: ['rect', { x: 12, y: 36, width: 176, height: 92 }], rhombus: ['polygon', { points: '100,8 160,82 100,156 40,82' }],
+  trapezoid: ['polygon', { points: '62,32 138,32 188,140 12,140' }],
+  pentagon: ['polygon', { points: poly(5, 74, 100, 88, -90) }], hexagon: ['polygon', { points: poly(6, 74, 100, 82, 0) }],
+  octagon: ['polygon', { points: poly(8, 74, 100, 82, 22.5) }]
 };
 function poly(n, r, cx, cy, rot) { const p = []; for (let i = 0; i < n; i++) { const a = (rot + 360 * i / n) * Math.PI / 180; p.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); } return p.join(' '); }
+const at = (r, a) => [(100 + r * Math.sin(a)).toFixed(1), (100 - r * Math.cos(a)).toFixed(1)];
 function clockSVG(h, m) {
-  let s = '<svg class="clock" viewBox="0 0 200 200" role="img" aria-label="A clock"><circle class="cface" cx="100" cy="100" r="94"/>';
-  for (let i = 0; i < 60; i++) { const a = i * 6 * Math.PI / 180, big = i % 5 === 0, r1 = big ? 80 : 85;
-    s += `<line class="tk${big ? ' big' : ''}" x1="${(100 + r1 * Math.sin(a)).toFixed(1)}" y1="${(100 - r1 * Math.cos(a)).toFixed(1)}" x2="${(100 + 89 * Math.sin(a)).toFixed(1)}" y2="${(100 - 89 * Math.cos(a)).toFixed(1)}"/>`; }
-  for (let i = 1; i <= 12; i++) { const a = i * 30 * Math.PI / 180; s += `<text class="cn" x="${(100 + 65 * Math.sin(a)).toFixed(1)}" y="${(100 - 65 * Math.cos(a) + 7).toFixed(1)}" text-anchor="middle">${i}</text>`; }
-  const ha = ((h % 12) * 30 + m * .5) * Math.PI / 180, ma = m * 6 * Math.PI / 180;
-  s += `<line class="hh" x1="100" y1="100" x2="${(100 + 42 * Math.sin(ha)).toFixed(1)}" y2="${(100 - 42 * Math.cos(ha)).toFixed(1)}"/>`;
-  s += `<line class="mh" x1="100" y1="100" x2="${(100 + 70 * Math.sin(ma)).toFixed(1)}" y2="${(100 - 70 * Math.cos(ma)).toFixed(1)}"/>`;
-  return s + '<circle class="hub" cx="100" cy="100" r="6"/></svg>';
+  const kids = [svg('circle', { class: 'cface', cx: 100, cy: 100, r: 94 })];
+  for (let i = 0; i < 60; i++) { const a = i * 6 * Math.PI / 180, big = i % 5 === 0, [x1, y1] = at(big ? 80 : 85, a), [x2, y2] = at(89, a);
+    kids.push(svg('line', { class: big ? 'tk big' : 'tk', x1, y1, x2, y2 })); }
+  for (let i = 1; i <= 12; i++) { const [x, y] = at(65, i * 30 * Math.PI / 180), t = svg('text', { class: 'cn', x, y: (Number(y) + 7).toFixed(1), 'text-anchor': 'middle' }); t.textContent = String(i); kids.push(t); }
+  const [hx, hy] = at(42, ((h % 12) * 30 + m * .5) * Math.PI / 180), [mx, my] = at(70, m * 6 * Math.PI / 180);
+  kids.push(svg('line', { class: 'hh', x1: 100, y1: 100, x2: hx, y2: hy }), svg('line', { class: 'mh', x1: 100, y1: 100, x2: mx, y2: my }), svg('circle', { class: 'hub', cx: 100, cy: 100, r: 6 }));
+  return svg('svg', { class: 'clock', viewBox: '0 0 200 200', role: 'img', 'aria-label': 'A clock' }, kids);
 }
 function blocksSVG(n) {
-  const t = Math.floor(n / 10), o = n % 10, cs = 14; let x = 4; const parts = [];
-  for (let i = 0; i < t; i++) { for (let j = 0; j < 10; j++) parts.push(`<rect class="bt" x="${x}" y="${4 + j * cs}" width="${cs}" height="${cs}" rx="1.5"/>`); x += cs + 8; }
-  if (o) { x += 8; for (let j = 0; j < o; j++) { const col = Math.floor(j / 5), row = j % 5; parts.push(`<rect class="bo" x="${x + col * (cs + 4)}" y="${4 + (9 - row) * cs}" width="${cs}" height="${cs}" rx="1.5"/>`); } x += (o > 5 ? 2 : 1) * (cs + 4); }
+  const t = Math.floor(n / 10), o = n % 10, cs = 14, kids = []; let x = 4;
+  for (let i = 0; i < t; i++) { for (let j = 0; j < 10; j++) kids.push(svg('rect', { class: 'bt', x, y: 4 + j * cs, width: cs, height: cs, rx: 1.5 })); x += cs + 8; }
+  if (o) { x += 8; for (let j = 0; j < o; j++) { const col = Math.floor(j / 5), row = j % 5; kids.push(svg('rect', { class: 'bo', x: x + col * (cs + 4), y: 4 + (9 - row) * cs, width: cs, height: cs, rx: 1.5 })); } x += (o > 5 ? 2 : 1) * (cs + 4); }
   const w = Math.max(x + 4, 40), h = 8 + 10 * cs;
-  return `<svg class="b10" viewBox="0 0 ${w} ${h}" width="${Math.round(w * 1.5)}" height="${Math.round(h * 1.5)}" role="img" aria-label="Base ten blocks">${parts.join('')}</svg>`;
+  return svg('svg', { class: 'b10', viewBox: `0 0 ${w} ${h}`, width: Math.round(w * 1.5), height: Math.round(h * 1.5), role: 'img', 'aria-label': 'Base ten blocks' }, kids);
 }
 function hearBtn(text, label, small) {
   const b = el('button', 'hear' + (small ? ' sm' : '')); b.type = 'button';
@@ -386,9 +388,9 @@ function renderShow(s) {
       (Array.isArray(s.values) ? s.values : []).slice(0, 10).forEach(v => { const t = str(v, 12); w.append(t === '?' ? el('span', 'qbox', '?') : el('span', null, t)); });
       return w;
     }
-    case 'clock': return fromMarkup(clockSVG(clamp(s.h, 1, 12), clamp(s.m, 0, 59)));
-    case 'shape': { const k = str(s.name, 20).toLowerCase(); return SHAPES[k] ? fromMarkup(`<svg class="shape" viewBox="0 0 200 164" role="img" aria-label="A shape">${SHAPES[k]}</svg>`) : el('div'); }
-    case 'blocks': return fromMarkup(blocksSVG(clamp(s.n, 0, 99)));
+    case 'clock': return clockSVG(clamp(s.h, 1, 12), clamp(s.m, 0, 59));
+    case 'shape': { const k = str(s.name, 20).toLowerCase(), sh = SHAPES[k]; return sh ? svg('svg', { class: 'shape', viewBox: '0 0 200 164', role: 'img', 'aria-label': 'A ' + k }, [svg(sh[0], sh[1])]) : el('div'); }
+    case 'blocks': return blocksSVG(clamp(s.n, 0, 99));
     case 'dots': {
       const a = clamp(s.a, 0, 20), b = clamp(s.b, 0, 20), x = clamp(s.cross, 0, a), w = el('div', 'dots');
       const g1 = el('div', 'grp'); for (let i = 0; i < a; i++) g1.append(el('i', 'dot' + (i >= a - x ? ' x' : ''))); w.append(g1);
@@ -401,13 +403,27 @@ function renderShow(s) {
 
 /* ---------------- views ---------------- */
 const app = { view: 'loading', s: null, end: null };
-const bar = $('#bar'), stage = $('#stage');
+const barEl = $('#bar'), stageEl = $('#stage');
+let bar = barEl, stage = stageEl;
 let toastT = 0;
+function oops(e) {
+  try { console.error(e); } catch (x) {}
+  const m = (e && (e.message || e.reason && e.reason.message)) || String(e);
+  toast('Something went wrong: ' + m + '. Tell Claude this message.');
+}
+window.addEventListener('error', e => oops(e.error || e.message));
+window.addEventListener('unhandledrejection', e => oops(e.reason));
 function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3800); }
 function changed() { if (['loading', 'start', 'grownups'].includes(app.view)) { if (app.view === 'loading' && (S.mode === 'off' || S.got.lessons)) app.view = 'start'; render(); } }
 function render() {
-  bar.replaceChildren(); stage.replaceChildren();
+  bar = el('div'); stage = el('div');
+  try { draw(); }
+  catch (e) { bar = barEl; stage = stageEl; oops(e); return; } // keep the screen she is on
+  barEl.replaceChildren(...bar.childNodes); stageEl.replaceChildren(...stage.childNodes);
+  bar = barEl; stage = stageEl;
   $('#grownups').hidden = !(app.view === 'start' && S.mode === 'db');
+}
+function draw() {
   if (app.view === 'loading') { const w = el('div', 'start'); w.append(el('p', 'note', 'Opening the notebook…')); stage.append(w); }
   else if (app.view === 'start') viewStart();
   else if (app.view === 'step') viewStep();
@@ -625,7 +641,11 @@ const actions = {
   'set-review': t => { const n = Number(t.dataset.n); S.settings = Object.assign({}, S.settings, { review: n }); save('settings/main', S.settings); render(); },
   'set-read': t => { speech.on = t.dataset.v === 'true'; prefs.set('read', speech.on); if (!speech.on) speech.stop(); render(); },
 };
-document.addEventListener('click', e => { const t = e.target.closest('[data-act]'); if (t && actions[t.dataset.act]) actions[t.dataset.act](t); });
+document.addEventListener('click', e => {
+  const t = e.target instanceof Element && e.target.closest('[data-act]');
+  if (!t || !actions[t.dataset.act]) return;
+  try { actions[t.dataset.act](t); } catch (err) { oops(err); }
+});
 
 window.__fgn = { normLesson, focusLesson, dueReviews, S };
 render();
